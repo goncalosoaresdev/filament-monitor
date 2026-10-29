@@ -1,0 +1,23 @@
+{
+    "name": "goncalosoaresdev/filament-monitor",
+    "description": "Monitorização do servidor, dos contentores e da aplicação com alertas (email, Telegram, sino do Filament).",
+    "type": "library",
+    "version": "1.0.0",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "filament/filament": "^5.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "GoncaloSoares\\FilamentMonitor\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "GoncaloSoares\\FilamentMonitor\\MonitorServiceProvider"
+            ]
+        }
+    }
+}

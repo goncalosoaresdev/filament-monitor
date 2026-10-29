@@ -1,0 +1,660 @@
+/* filament-monitor: página Monitorização (ver README). Cores do painel (--gray-*, --success-*, ...), neutras. */
+
+.fm {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.fm-overview,
+.fm-card {
+    --fm-color: var(--gray-400);
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 0 0 1px color-mix(in oklab, var(--gray-950) 5%, transparent);
+}
+
+.dark .fm-overview,
+.dark .fm-card {
+    background: var(--gray-900);
+    box-shadow: 0 0 0 1px color-mix(in oklab, #fff 10%, transparent);
+}
+
+[data-status='ok'] {
+    --fm-color: var(--success-500);
+}
+
+[data-status='warning'] {
+    --fm-color: var(--warning-500);
+}
+
+[data-status='failed'],
+[data-status='stale'] {
+    --fm-color: var(--danger-500);
+}
+
+/* Estado geral */
+
+.fm-overview {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+}
+
+.fm-overview-dot,
+.fm-dot {
+    flex: none;
+    border-radius: 9999px;
+    background: var(--fm-color);
+}
+
+.fm-overview-dot {
+    width: 0.875rem;
+    height: 0.875rem;
+    box-shadow: 0 0 0 0.3125rem color-mix(in oklab, var(--fm-color) 18%, transparent);
+}
+
+.fm-overview-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.5rem;
+    color: var(--gray-950);
+}
+
+.dark .fm-overview-title {
+    color: #fff;
+}
+
+.fm-overview-meta {
+    margin-top: 0.125rem;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.dark .fm-overview-meta {
+    color: var(--gray-400);
+}
+
+.fm-overview-meta code {
+    font-size: 0.8125rem;
+}
+
+/* Cartões */
+
+.fm-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+/* Monitor parado: os resultados são antigos. */
+.fm-grid.is-stale {
+    opacity: 0.55;
+}
+
+.fm-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.125rem;
+    overflow: hidden;
+}
+
+/* Só os problemas levam a barra de cor: com tudo bem, a página fica calma. */
+.fm-card:not([data-status='ok'])::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0.1875rem;
+    background: var(--fm-color);
+}
+
+.fm-card-head {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.fm-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+}
+
+.fm-card-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-950);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dark .fm-card-title {
+    color: #fff;
+}
+
+.fm-card-summary {
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    color: var(--gray-700);
+    overflow-wrap: anywhere;
+}
+
+.dark .fm-card-summary {
+    color: var(--gray-300);
+}
+
+.fm-card-meta {
+    margin-top: auto;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.fm-card-head .fi-dropdown {
+    margin-inline-end: -0.375rem;
+}
+
+.fm-card-silenced {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.dark .fm-card-silenced {
+    color: var(--gray-400);
+}
+
+.fm-card-silenced-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
+/* Histórico: o período numa linha por cima de todos os gráficos (vale para todos). */
+
+.fm-history {
+    display: grid;
+    gap: 1rem;
+    transition: opacity 0.15s;
+}
+
+/* A trocar de período, os gráficos ficam onde estão, mais claros (sem saltos). */
+.fm-history.is-loading .fm-charts {
+    opacity: 0.5;
+}
+
+.fm-history-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    align-items: center;
+}
+
+.fm-history-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-950);
+}
+
+.dark .fm-history-title {
+    color: #fff;
+}
+
+.fm-seg {
+    display: inline-flex;
+    padding: 0.1875rem;
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--gray-950) 5%, transparent);
+}
+
+.dark .fm-seg {
+    background: color-mix(in oklab, #fff 6%, transparent);
+}
+
+.fm-seg button {
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-600);
+}
+
+.dark .fm-seg button {
+    color: var(--gray-400);
+}
+
+.fm-seg button:hover {
+    color: var(--gray-950);
+}
+
+.dark .fm-seg button:hover {
+    color: #fff;
+}
+
+.fm-seg button.is-on {
+    background: #fff;
+    color: var(--gray-950);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.dark .fm-seg button.is-on {
+    background: var(--gray-800);
+    color: #fff;
+}
+
+.fm-charts {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+}
+
+.fm-chart {
+    --fm-line: var(--primary-600);
+    --fm-surface: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.125rem 0.875rem;
+    border-radius: 0.75rem;
+    background: var(--fm-surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 0 0 1px color-mix(in oklab, var(--gray-950) 5%, transparent);
+}
+
+.dark .fm-chart {
+    --fm-line: var(--primary-400);
+    --fm-surface: var(--gray-900);
+    box-shadow: 0 0 0 1px color-mix(in oklab, #fff 10%, transparent);
+}
+
+.fm-chart-head {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.fm-chart-names {
+    min-width: 0;
+}
+
+.fm-chart-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-950);
+}
+
+.dark .fm-chart-title {
+    color: #fff;
+}
+
+.fm-chart-subtitle,
+.fm-chart-readout span {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.fm-chart-readout {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    white-space: nowrap;
+}
+
+.fm-chart-readout strong {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    color: var(--gray-950);
+}
+
+.dark .fm-chart-readout strong {
+    color: #fff;
+}
+
+/* Gráfico de linha: eixo dos y à esquerda, a área do desenho, e o eixo dos x por baixo. */
+
+.fm-plot-area {
+    --fm-gutter: 2.75rem;
+    display: flex;
+    height: 7.5rem;
+}
+
+.fm-yaxis {
+    position: relative;
+    flex: none;
+    width: var(--fm-gutter);
+}
+
+.fm-yaxis span,
+.fm-xaxis span {
+    position: absolute;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray-500);
+    white-space: nowrap;
+}
+
+.fm-yaxis span {
+    right: 0.5rem;
+    translate: 0 50%;
+}
+
+.fm-plot {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    cursor: crosshair;
+    touch-action: pan-y;
+}
+
+.fm-grid-line {
+    position: absolute;
+    inset-inline: 0;
+    border-top: 1px solid color-mix(in oklab, var(--gray-950) 6%, transparent);
+}
+
+.fm-grid-line.is-base {
+    border-top-color: color-mix(in oklab, var(--gray-950) 14%, transparent);
+}
+
+.dark .fm-grid-line {
+    border-top-color: color-mix(in oklab, #fff 7%, transparent);
+}
+
+.dark .fm-grid-line.is-base {
+    border-top-color: color-mix(in oklab, #fff 16%, transparent);
+}
+
+/* Limites de alerta: tracejado de propósito (é um limite, não uma linha da grelha), na cor do estado. */
+.fm-limit {
+    position: absolute;
+    inset-inline: 0;
+    border-top: 1px dashed var(--fm-limit);
+}
+
+.fm-limit[data-status='warning'] {
+    --fm-limit: var(--warning-500);
+}
+
+.fm-limit[data-status='failure'] {
+    --fm-limit: var(--danger-500);
+}
+
+
+.fm-line {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.fm-line-area {
+    fill: var(--fm-line);
+    opacity: 0.1;
+}
+
+.fm-line-stroke {
+    fill: none;
+    stroke: var(--fm-line);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.fm-point {
+    position: absolute;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--fm-line);
+    box-shadow: 0 0 0 2px var(--fm-surface);
+    translate: -50% 50%;
+    pointer-events: none;
+}
+
+.fm-cross {
+    position: absolute;
+    inset-block: 0;
+    border-left: 1px solid color-mix(in oklab, var(--gray-500) 60%, transparent);
+    pointer-events: none;
+}
+
+.fm-xaxis {
+    position: relative;
+    height: 0.875rem;
+    margin-inline-start: var(--fm-gutter, 2.75rem);
+}
+
+.fm-xaxis span {
+    translate: -50% 0;
+}
+
+/* Barras por item (memória por contentor): ocupam a largura toda da grelha. */
+
+.fm-bars {
+    grid-column: 1 / -1;
+}
+
+.fm-bar-list {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.fm-bar-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) minmax(8rem, auto);
+    gap: 0.75rem;
+    align-items: center;
+    font-size: 0.8125rem;
+}
+
+.fm-bar-name {
+    overflow: hidden;
+    color: var(--gray-700);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dark .fm-bar-name {
+    color: var(--gray-300);
+}
+
+.fm-bar-track {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.fm-bar {
+    flex: none;
+    height: 0.75rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+    background: var(--fm-line);
+}
+
+.fm-bar-value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray-950);
+    white-space: nowrap;
+}
+
+.dark .fm-bar-value {
+    color: #fff;
+}
+
+.fm-bar-meta {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray-500);
+    white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+    .fm-bar-row {
+        grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+    }
+
+    .fm-bar-meta {
+        grid-column: 2;
+        margin-top: -0.375rem;
+    }
+}
+
+/* Cartão "Servidor" no painel de controlo (MonitorStatusWidget). As cores vêm do [data-status] (acima). */
+
+.fm-widget[data-status='empty'] {
+    --fm-color: var(--gray-400);
+}
+
+.fm-widget {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 0 0 1px color-mix(in oklab, var(--gray-950) 5%, transparent);
+}
+
+.dark .fm-widget {
+    background: var(--gray-900);
+    box-shadow: 0 0 0 1px color-mix(in oklab, #fff 10%, transparent);
+}
+
+.fm-widget-head {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.fm-widget-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-950);
+}
+
+.dark .fm-widget-title {
+    color: #fff;
+}
+
+.fm-widget-link {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--primary-600);
+}
+
+.dark .fm-widget-link {
+    color: var(--primary-400);
+}
+
+.fm-widget-link:hover {
+    text-decoration: underline;
+}
+
+.fm-widget-status {
+    display: flex;
+    gap: 0.875rem;
+    align-items: center;
+}
+
+.fm-widget-headline {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-950);
+}
+
+.dark .fm-widget-headline {
+    color: #fff;
+}
+
+.fm-widget-meta {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.fm-widget-problems {
+    display: grid;
+    gap: 0.375rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid color-mix(in oklab, var(--gray-950) 6%, transparent);
+}
+
+.dark .fm-widget-problems {
+    border-top-color: color-mix(in oklab, #fff 8%, transparent);
+}
+
+.fm-widget-problems li {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+    font-size: 0.8125rem;
+}
+
+.fm-widget-problem-label {
+    flex: none;
+    font-weight: 500;
+    color: var(--gray-950);
+}
+
+.dark .fm-widget-problem-label {
+    color: #fff;
+}
+
+.fm-widget-problem-summary {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--gray-500);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-widget-more a {
+    padding-inline-start: 1rem;
+    color: var(--gray-500);
+}
+
+.fm-widget-more a:hover {
+    text-decoration: underline;
+}
+
+.fm-widget-readings {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    padding-top: 0.875rem;
+    border-top: 1px solid color-mix(in oklab, var(--gray-950) 6%, transparent);
+}
+
+.dark .fm-widget-readings {
+    border-top-color: color-mix(in oklab, #fff 8%, transparent);
+}
+
+.fm-widget-readings.is-stale {
+    opacity: 0.55;
+}
+
+.fm-widget-readings dt {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.fm-widget-readings dd {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-950);
+}
+
+.dark .fm-widget-readings dd {
+    color: #fff;
+}

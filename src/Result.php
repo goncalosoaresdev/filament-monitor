@@ -49,9 +49,4 @@ final class Result
 
         return new self($status, $summary, $metrics);
     }
-
-    public function withStatus(Status $status): self
-    {
-        return new self($status, $this->summary, $this->metrics);
-    }
 }

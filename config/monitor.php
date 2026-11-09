@@ -9,35 +9,35 @@ use GoncaloSoares\FilamentMonitor\Checks\QueueCheck;
 use GoncaloSoares\FilamentMonitor\Checks\RedisCheck;
 
 /*
-| filament-monitor (README do pacote). Opções comuns a todas as verificações: `class`, `label`, `every` (segundos entre
-| corridas, 60), `for` (minutos seguidos no mesmo estado antes de alertar e de dar como recuperado, 0), `enabled`.
+| filament-monitor (see the package README). Options shared by every check: `class`, `label`, `every` (seconds between
+| runs, 60), `for` (minutes in the same state before alerting and before reporting recovery, 0), `enabled`.
 */
 return [
 
-    // Antes do título dos alertas: "[Nome] Falha: Disco".
+    // Prefix of the alert titles: "[Name] Failure: Disk".
     'name' => env('APP_NAME'),
 
-    // Painel onde está a página (ligações nos alertas).
+    // Panel ID where the page lives (used for the links in the alerts).
     'panel' => null,
 
-    // Estado dos alertas e batimentos. Num volume partilhado pelo processo do monitor e pelo scheduler.
+    // Alert state and heartbeats. Must be shared (e.g. a Docker volume) by the monitor process and the scheduler.
     'path' => storage_path('monitor'),
 
-    // Segundos entre voltas do monitor:work (cada verificação corre de `every` em `every` segundos).
+    // Seconds between monitor:work rounds (each check still runs every `every` seconds).
     'tick' => 15,
 
-    // Minutos entre lembretes enquanto uma verificação continuar a falhar.
+    // Minutes between reminders while a check keeps failing.
     'remind_every' => 360,
 
-    // Sem resultados novos há mais do que isto (minutos), a página avisa que o monitor parou.
+    // With no new results for longer than this (minutes), the page warns that the monitor has stopped.
     'stale_after' => 3,
 
-    // Números para os gráficos: ao minuto durante `full_resolution_hours`, depois médias de 15 minutos.
+    // Chart samples: per minute for `full_resolution_hours`, then 15-minute averages.
     'full_resolution_hours' => 48,
     'retention_days' => 30,
     'incidents_retention_days' => 365,
 
-    // O scheduler vigia o monitor (monitor:heartbeat): falha sem batimento há `failure` minutos, mantido `for` minutos.
+    // The scheduler watches the monitor (monitor:heartbeat): failure after `failure` minutes without a heartbeat, held for `for` minutes.
     'watchdog' => ['failure' => 3, 'for' => 2],
 
     'checks' => [
@@ -51,16 +51,16 @@ return [
     ],
 
     'channels' => [
-        // Endereços separados por vírgulas. Sem base de dados também funciona.
+        // Comma-separated addresses. Works without the database.
         'mail' => ['to' => env('MONITOR_ALERT_EMAILS')],
 
-        // Bot do Telegram (README do pacote).
+        // Telegram bot (see the package README).
         'telegram' => [
             'token' => env('MONITOR_TELEGRAM_BOT_TOKEN'),
             'chat_id' => env('MONITOR_TELEGRAM_CHAT_ID'),
         ],
 
-        // Sino do Filament: `model` dos utilizadores e as condições (ex. ['is_admin' => true]). null = desligado.
+        // Filament database notifications: the user `model` and the conditions (e.g. ['is_admin' => true]). null = off.
         'database' => ['model' => null, 'where' => []],
     ],
 

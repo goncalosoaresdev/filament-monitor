@@ -20,7 +20,7 @@ use Throwable;
  * o primeiro agendamento, e o scheduler não consulta a cache para "pause" / "interrupt").
  */
 #[Signature('monitor:heartbeat')]
-#[Description('Batimento do scheduler e vigia do processo da monitorização')]
+#[Description('Scheduler heartbeat and watchdog for the monitor process')]
 class MonitorHeartbeatCommand extends Command
 {
     public function handle(): int

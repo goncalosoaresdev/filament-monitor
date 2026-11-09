@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('monitor:test-alert')]
-#[Description('Envia um alerta de teste por todos os canais configurados')]
+#[Description('Sends a test alert through every configured channel')]
 class MonitorTestAlertCommand extends Command
 {
     public function handle(): int

@@ -1,109 +1,203 @@
 # filament-monitor
 
-Monitorização do servidor, dos contentores e da aplicação para o Filament 5, com alertas por Telegram, email e o sino
-do Filament. Sem pacotes nem serviços de terceiros.
+Server, container and application monitoring for Filament 5, with alerts by Telegram, email and Filament database
+notifications. No third-party packages or services.
 
-## Como funciona
+- A **Monitoring** page with the state of every check, charts (24 h, 7 days, 30 days) and the alert history.
+- A **Server** card on the panel dashboard.
+- Checks for disk, memory, CPU load, database, Redis, the scheduler, queues, HTTP endpoints and Docker containers.
+- English and Portuguese translations.
 
-- **`php artisan monitor:work`**, um processo próprio (um serviço no Docker), corre as verificações e envia os alertas
-  **na hora**. Não usa a fila nem o scheduler: tem de avisar precisamente quando são eles que param.
-- **O estado dos alertas** fica num ficheiro (`config('monitor.path')`), não na base de dados nem no Redis: "base de
-  dados em baixo" também é avisado. A base de dados só guarda o que a página mostra (último resultado, números,
-  incidentes); se estiver em baixo, os alertas saem na mesma.
-- **O scheduler e o monitor vigiam-se um ao outro:** `monitor:heartbeat` (a cada minuto no scheduler) bate como
-  "scheduler" e alerta se o monitor deixar de bater. Os dois têm de partilhar `config('monitor.path')` (um volume).
-- Um problema só alerta se durar `for` minutos; agrava (aviso → falha), lembra de `remind_every` em `remind_every`
-  minutos e avisa quando volta ao normal (também depois de `for` minutos, para um valor a oscilar no limite não alertar
-  sem parar).
+## How it works
 
-## Instalação (pacote local)
+- **`php artisan monitor:work`** is a long-running process of its own (e.g. a Docker service). It runs the checks and
+  sends the alerts **right away**. It does not use the queue or the scheduler, because it has to alert precisely when
+  those stop.
+- **The alert state** lives in a file (`config('monitor.path')`), not in the database or Redis, so "database down" is
+  alerted too. The database only stores what the page shows (latest result, samples, incidents); when it is down, the
+  alerts still go out.
+- **The scheduler and the monitor watch each other:** `monitor:heartbeat` (every minute in the scheduler) beats as
+  "scheduler" and alerts if the monitor stops beating. Both must share `config('monitor.path')` (e.g. a volume).
+- A problem only alerts after lasting `for` minutes. It escalates (warning to failure), reminds every `remind_every`
+  minutes and reports recovery (also after `for` minutes, so a value hovering around a threshold does not alert
+  non-stop).
 
-```json
-"repositories": [{ "type": "path", "url": "packages/filament-monitor" }]
-```
+## Requirements
+
+- PHP 8.3+
+- Laravel with Filament 5.9+
+- Linux for the host checks (`/proc/meminfo`, `/proc/loadavg`)
+
+## Installation
 
 ```sh
 composer require goncalosoaresdev/filament-monitor
 php artisan vendor:publish --tag=monitor-config   # config/monitor.php
 php artisan migrate
+php artisan filament:assets
 ```
 
-No painel:
+Not on Packagist yet? Add the repository to your `composer.json` first:
 
-```php
-FilamentMonitorPlugin::make()
-    ->authorize(fn (): bool => (bool) auth()->user()?->is_admin)   // sem authorize(), ninguém vê a página
-    ->navigationGroup('Sistema'),
+```json
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/goncalosoaresdev/filament-monitor" }
+]
 ```
 
-No scheduler (`routes/console.php`), sem `onOneServer()` (o bloqueio está no Redis):
+Register the plugin in a panel:
 
 ```php
+use GoncaloSoares\FilamentMonitor\Filament\FilamentMonitorPlugin;
+
+$panel->plugins([
+    FilamentMonitorPlugin::make()
+        ->authorize(fn (): bool => (bool) auth()->user()?->is_admin)   // without authorize(), nobody sees the page
+        ->navigationGroup('System'),
+]);
+```
+
+Add to the scheduler (`routes/console.php`), without `onOneServer()` (the lock lives in Redis):
+
+```php
+use Illuminate\Support\Facades\Schedule;
+
 Schedule::command('monitor:heartbeat')->everyMinute();
-Schedule::command('monitor:prune')->daily();   // médias de 15 min depois de 48 h; apaga o que passa de 30 dias
+Schedule::command('monitor:prune')->daily();   // 15-minute averages after 48 h; deletes what is older than 30 days
 ```
 
-E o processo, por exemplo no Docker Compose, com o volume partilhado com o scheduler:
+And run the process, for example as a Docker Compose service sharing the state volume with the scheduler:
 
 ```yaml
-monitor:
-  command: ["php", "artisan", "monitor:work"]
-  volumes: [monitor-state:/var/www/html/storage/monitor]
+services:
+  monitor:
+    image: your-app-image
+    command: ["php", "artisan", "monitor:work"]
+    restart: unless-stopped
+    volumes: [monitor-state:/var/www/html/storage/monitor]
+
+  scheduler:
+    image: your-app-image
+    command: ["php", "artisan", "schedule:work"]
+    volumes: [monitor-state:/var/www/html/storage/monitor]
+
+volumes:
+  monitor-state:
 ```
 
-## Verificações
+The monitor process and the scheduler must start with the database and Redis down: no `depends_on` on them and no
+migrations on boot. In the scheduler, use `Schedule::withoutInterruptionPolling()` and put `monitor:heartbeat` first,
+without `onOneServer()`.
 
-Em `config('monitor.checks')`, por chave. Opções comuns: `class`, `label`, `every` (segundos, 60), `for` (minutos, 0),
-`enabled`. Limites `warning` / `failure` na unidade de cada uma.
+## Checks
 
-| Classe            | O quê                                                                     | Unidade dos limites      |
-|-------------------|---------------------------------------------------------------------------|--------------------------|
-| `DiskCheck`       | espaço usado em `path`                                                    | %                        |
-| `MemoryCheck`     | memória usada (`/proc/meminfo`, `MemAvailable`)                           | %                        |
-| `CpuLoadCheck`    | carga a 5 minutos por núcleo (`/proc/loadavg`)                            | carga por núcleo         |
-| `DatabaseCheck`   | `select 1`; no PostgreSQL, ligações face a `max_connections` e tamanho    | % das ligações           |
-| `RedisCheck`      | `PING`, gravação em disco (AOF/RDB), memória face a `maxmemory`           | % da memória             |
-| `HeartbeatCheck`  | minutos desde o último batimento de `name`                                | minutos                  |
-| `QueueCheck`      | trabalho de teste (`canary`) e trabalhos à espera (`size_warning`, `size_failure`) | minutos sem passar |
-| `HttpCheck`       | `url` responde com `status` (200); `slow_ms` é aviso                      | -                        |
-| `ContainersCheck` | contentores do mesmo projeto do compose: parados, `unhealthy`, sempre a reiniciar, `services` em falta; memória e CPU de cada um | `restarts` (3 em 15 min) |
+In `config('monitor.checks')`, by key. Common options: `class`, `label`, `every` (seconds, 60), `for` (minutes, 0),
+`enabled`. The `warning` / `failure` thresholds are in each check's unit.
 
-O `QueueCheck` com canário só serve em filas cujos workers corram qualquer job. O `ContainersCheck` precisa da API do
-Docker, e só lê `GET /containers/json` e `GET /containers/{id}/stats`: ponha à frente do socket um proxy que só deixe
-passar esses dois (ex. um Caddy com `path_regexp`, como `docker/docker-api/Caddyfile` nesta aplicação). Nunca o socket
-montado diretamente, nem um proxy "só GET": `/containers/{id}/json`, `/logs` e `/archive` mostram as variáveis e os
-ficheiros dos outros contentores.
+| Class             | What                                                                         | Threshold unit           |
+|-------------------|------------------------------------------------------------------------------|--------------------------|
+| `DiskCheck`       | space used on `path`                                                         | %                        |
+| `MemoryCheck`     | memory used (`/proc/meminfo`, `MemAvailable`)                                | %                        |
+| `CpuLoadCheck`    | 5-minute load per core (`/proc/loadavg`)                                     | load per core            |
+| `DatabaseCheck`   | `select 1`; on PostgreSQL, connections against `max_connections` and size    | % of connections         |
+| `RedisCheck`      | `PING`, persistence (AOF/RDB), memory against `maxmemory`                    | % of memory              |
+| `HeartbeatCheck`  | minutes since the last heartbeat of `name`                                   | minutes                  |
+| `QueueCheck`      | test job (`canary`) and waiting jobs (`size_warning`, `size_failure`)        | minutes without a pass   |
+| `HttpCheck`       | `url` answers with `status` (200); `slow_ms` is a warning; `timeout`, `headers` | -                     |
+| `ContainersCheck` | containers of the same Compose project: stopped, `unhealthy`, restart loops, missing `services`; memory and CPU of each | `restarts` (3 in 15 min) |
 
-O processo do monitor e o scheduler têm de arrancar com a base de dados e o Redis em baixo: sem `depends_on` deles e sem
-migrações no arranque. No scheduler, `Schedule::withoutInterruptionPolling()` e o `monitor:heartbeat` primeiro, sem
-`onOneServer()`.
+Example:
 
-Uma verificação nova estende `GoncaloSoares\FilamentMonitor\Check` e devolve um `Result` (estado, resumo e números para
-os gráficos, que ficam em `monitor_samples` como `<chave>.<número>`).
+```php
+'checks' => [
+    'disk' => ['class' => DiskCheck::class, 'path' => '/', 'warning' => 80, 'failure' => 90, 'for' => 5],
+    'queue' => ['class' => QueueCheck::class, 'queue' => 'default', 'warning' => 5, 'failure' => 15, 'size_warning' => 500],
+    'web' => ['class' => HttpCheck::class, 'url' => 'http://app:8080/up', 'slow_ms' => 2000, 'for' => 2],
+    'containers' => [
+        'class' => ContainersCheck::class,
+        'url' => env('MONITOR_DOCKER_URL'),   // e.g. http://docker-api:2375
+        'services' => ['app', 'queue', 'scheduler', 'monitor', 'pgsql', 'redis'],
+        'for' => 3,
+    ],
+],
+```
 
-## Página
+The `QueueCheck` canary only makes sense on queues whose workers run any job; on restricted queues set
+`'canary' => false` and use the size thresholds.
 
-`Monitoring` (no menu, com o número de problemas): o estado de cada verificação, os gráficos (24 h, 7 dias, 30 dias;
-cada verificação diz os seus em `Check::charts()`) e o menu "⋮" de cada cartão para silenciar os alertas.
-`MonitorIncidents` (fora do menu, ligada pelo cabeçalho): o histórico dos alertas. `MonitorStatusWidget`: o cartão
-"Servidor" no painel de controlo do painel (estado, problemas, números principais); `->dashboardWidget(false)` tira-o.
+### Docker API for `ContainersCheck`
 
-## Silenciar
+`ContainersCheck` only reads `GET /containers/json` and `GET /containers/{id}/stats`. Put a proxy in front of the Docker
+socket that only lets those two through. **Never** mount the socket directly into the app, and never use a "GET only"
+proxy: `/containers/{id}/json`, `/logs` and `/archive` expose the environment variables and files of the other
+containers.
 
-Na página, ou `php artisan monitor:silence <chave>... --minutes=60` (`--resume` retoma). Silenciada, a verificação
-continua a correr e a aparecer, mas não sai nenhum alerta; quando o silêncio acaba e ainda está a falhar, o alerta sai
-nessa altura. Útil num deploy, antes de recriar os contentores.
+A Caddy proxy that does exactly this:
 
-## Canais
+```caddyfile
+{
+	admin off
+	auto_https off
+}
 
-- **Telegram:** `MONITOR_TELEGRAM_BOT_TOKEN` (do @BotFather) e `MONITOR_TELEGRAM_CHAT_ID` (de
-  `https://api.telegram.org/bot<token>/getUpdates`, depois de mandar uma mensagem ao bot). O token nunca chega ao log.
-- **Email:** `MONITOR_ALERT_EMAILS`, separados por vírgulas. Enviado na hora, sem fila.
-- **Sino:** `channels.database.model` + `where` (ex. `['is_admin' => true]`). Precisa da base de dados.
+:2375 {
+	@allowed {
+		method GET
+		path_regexp ^(/v[0-9.]+)?/containers/(json|[a-zA-Z0-9]+/stats)$
+	}
 
-Testar: `php artisan monitor:test-alert` ou "Enviar alerta de teste" na página.
+	handle @allowed {
+		reverse_proxy unix//var/run/docker.sock
+	}
 
-## Personalizar
+	respond 403
+}
+```
 
-Traduções (`en`, `pt`) e vistas podem ser substituídas na aplicação: `lang/vendor/monitor/` e
-`resources/views/vendor/monitor/`. O CSS (`.fm-*`) é registado no Filament e publicado pelo `php artisan filament:assets`.
+```yaml
+  docker-api:
+    image: caddy:2-alpine
+    volumes:
+      - ./docker-api/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+Then set `MONITOR_DOCKER_URL=http://docker-api:2375` in the app.
+
+### Custom checks
+
+A new check extends `GoncaloSoares\FilamentMonitor\Check` and returns a `Result` (status, summary and numbers for the
+charts, stored in `monitor_samples` as `<key>.<number>`). Charts are declared in `Check::charts()`.
+
+## Page
+
+`Monitoring` (in the navigation, with the number of problems as a badge): the state of every check, the charts and a
+"⋮" menu on each card to silence its alerts. `MonitorIncidents` (outside the navigation, linked from the header): the
+alert history. `MonitorStatusWidget`: the "Server" card on the panel dashboard (state, problems, key numbers);
+`->dashboardWidget(false)` removes it.
+
+## Silencing
+
+From the page, or `php artisan monitor:silence <key>... --minutes=60` (`--resume` resumes). While silenced, a check
+keeps running and showing on the page, but no alert is sent; if it is still failing when the silence ends, the alert
+goes out then. Handy during a deploy, before recreating the containers.
+
+## Channels
+
+- **Telegram:** `MONITOR_TELEGRAM_BOT_TOKEN` (from @BotFather) and `MONITOR_TELEGRAM_CHAT_ID` (from
+  `https://api.telegram.org/bot<token>/getUpdates`, after sending a message to the bot). The token never reaches the
+  log.
+- **Email:** `MONITOR_ALERT_EMAILS`, comma-separated. Sent right away, not queued.
+- **Filament notifications:** `channels.database.model` + `where` (e.g. `['is_admin' => true]`). Needs the database.
+
+Test with `php artisan monitor:test-alert` or "Send test alert" on the page.
+
+## Customising
+
+Translations (`en`, `pt`) and views can be overridden in the app: `lang/vendor/monitor/` and
+`resources/views/vendor/monitor/`. The CSS (`.fm-*`) is registered with Filament and published by
+`php artisan filament:assets`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

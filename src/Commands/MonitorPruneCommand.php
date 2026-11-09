@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('monitor:prune')]
-#[Description('Junta os números antigos da monitorização em médias de 15 minutos e apaga o que passou da retenção')]
+#[Description('Rolls old monitoring samples into 15-minute averages and deletes what is past retention')]
 class MonitorPruneCommand extends Command
 {
     public function handle(): int

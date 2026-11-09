@@ -1,9 +1,16 @@
 {
     "name": "goncalosoaresdev/filament-monitor",
-    "description": "Monitorização do servidor, dos contentores e da aplicação com alertas (email, Telegram, sino do Filament).",
+    "description": "Server, container and application monitoring for Filament, with alerts by Telegram, email and Filament notifications.",
+    "keywords": ["laravel", "filament", "monitoring", "alerts", "docker", "telegram"],
+    "homepage": "https://github.com/goncalosoaresdev/filament-monitor",
     "type": "library",
-    "version": "1.0.0",
-    "license": "proprietary",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Gonçalo Soares",
+            "homepage": "https://github.com/goncalosoaresdev"
+        }
+    ],
     "require": {
         "php": "^8.3",
         "filament/filament": "^5.9"
@@ -19,5 +26,7 @@
                 "GoncaloSoares\\FilamentMonitor\\MonitorServiceProvider"
             ]
         }
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

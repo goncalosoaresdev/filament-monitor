@@ -12,8 +12,8 @@ use Illuminate\Console\Command;
  * O processo do monitor (serviço `monitor` no compose): uma volta a cada config('monitor.tick') segundos. Sai ao fim de
  * --max-time (o Docker volta a arrancá-lo, como aos workers da fila) e ao receber SIGTERM, depois da volta em curso.
  */
-#[Signature('monitor:work {--once : Uma volta só} {--max-time=3600 : Segundos até sair (o Docker volta a arrancá-lo)}')]
-#[Description('Corre as verificações da monitorização e envia os alertas')]
+#[Signature('monitor:work {--once : Run a single round} {--max-time=3600 : Seconds before exiting (the process manager restarts it)}')]
+#[Description('Runs the monitoring checks and sends the alerts')]
 class MonitorWorkCommand extends Command
 {
     private bool $stop = false;
